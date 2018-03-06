@@ -8,10 +8,8 @@
  */
 
 #include "firstpass.h"
-#include "worker.h"
 #include "useful.h"
 #include "structs.h"
-#include "bits.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -51,7 +49,7 @@ BOOL firstpass_analyze_line(FILE *fd) {
             if ((errno = verify_label(first_arg)) == 0) {
                 current_label = get_label(first_arg);
                 if (current_label != NULL && current_label->address == -1 && current_label->type == LABEL_TYPE_ENTRY) {
-                    /* Valid label kept safely in first_arg */
+                    /* Valid label - kept in first_arg */
                     valid_label = TRUE;
                 } else if (current_label == NULL) {
                     valid_label = TRUE;
@@ -64,13 +62,13 @@ BOOL firstpass_analyze_line(FILE *fd) {
                 print_err(errno);
             }
         }
-        /* We have the existing, nonexisting or invalid label,
+        /* We have the existing, non-existing or invalid label.
            If valid_label == FALSE, first_arg contains the compiler directive or command we need to analyze,
            otherwise it contains a label and next_arg contains the next argument(s) in the line */
         if ((errno = is_compiler_directive((valid_label ? next_arg : first_arg)))) {
             if (errno == DIRECTIVE_DATA || errno == DIRECTIVE_STRING || errno == DIRECTIVE_STRUCT) {
                 if (valid_label) {
-                    /* This way 'next_arg' will hold all the parameters and without any optional starting label or the directive */
+                    /* 'next_arg' will hold all the parameters and without any optional starting label or the directive */
                     next_arg = separate_arg(next_arg, current_line, MAX_BUFFER - 1);
                 }
                 if (is_useless_line(next_arg)) {
@@ -80,13 +78,13 @@ BOOL firstpass_analyze_line(FILE *fd) {
                 /* If you handled the compiler directive successfully and you need to store a label */
                 if (((data_len = (get_compiler_directive_args_len(next_arg, errno))) != -1) && valid_label) {
                     if (current_label == NULL) {
-                        /* Insert the new label at DC since it will be pointing at data */
+                        /* Insert the new label to DC since it will be pointing at data */
                         labels = realloc(labels, sizeof(label) * (num_of_labels + 1));
                         if (!labels) {
                             printf("memory allocation failed");
                             exit(0);
                         }
-                        /* Enter the new label to the end of the labels list*/
+                        /* Push the new label to the labels list*/
                         labels[num_of_labels].name = strdup(first_arg);
                         labels[num_of_labels].address = dataCount - 1;
                         labels[num_of_labels].type = LABEL_TYPE_REGULAR;
@@ -114,6 +112,7 @@ BOOL firstpass_analyze_line(FILE *fd) {
                     labels[num_of_labels].name = strdup(next_arg);
                     labels[num_of_labels].address = 0;
                     labels[num_of_labels].type = LABEL_TYPE_EXTERNAL;
+                    labels[num_of_labels].length = 0;
                     ++num_of_labels;
                 } else {
                     if (current_label != NULL) {
@@ -171,7 +170,7 @@ BOOL firstpass_analyze_line(FILE *fd) {
                         current_label->address = curr_loc;
                     }
                 } else {
-                    /* Insert the previously discovered label at DC since it will be pointing at data */
+                    /* Insert the previously discovered label to DC since it will be pointing at data */
                     labels = realloc(labels, sizeof(label) * (num_of_labels + 1));
                     if (!labels) {
                         printf("memory allocation failed");
@@ -208,11 +207,6 @@ Number number_of_words(char *line) {
     char *command;
     char *first_arg;
     char *second_arg;
-    char *type;
-    char *first_comb;
-    char *sec_comb;
-    char *dbl;
-    char *struct_name;
     char *struct_arg_num;
     char temp_line[MAX_BUFFER];
     Number i, temp;
@@ -270,10 +264,13 @@ Number number_of_words(char *line) {
         if (is_register(first_arg)) {
             /* There is no extra word. This means only 1 word is taken here */
             return 1;
-        } else if ((strchr(first_arg, '.') != NULL) && ((struct_name = strtok(first_arg, ".")) != NULL)) {
+        } else
+            /* Check if it is a struct. */
+        if ((strchr(first_arg, '.') != NULL) && ((strtok(first_arg, ".")) != NULL)) {
             if ((struct_arg_num = strtok(NULL, " ")) == NULL) {
                 print_err(ERROR_INVALID_STRUCT_FORMAT);
                 return 0;
+                /*make sure the the struct arg is a number*/
             } else if (extract_num(struct_arg_num, &temp) != -1) {
                 return 3;
             }
@@ -288,7 +285,7 @@ Number number_of_words(char *line) {
         if (first_arg[0] == '#') {
             i++;
             /*Check if it is struct*/
-        } else if ((strchr(first_arg, '.') != NULL) && ((struct_name = strtok(first_arg, ".")) != NULL)) {
+        } else if ((strchr(first_arg, '.') != NULL) && ((strtok(first_arg, ".")) != NULL)) {
             if ((struct_arg_num = strtok(NULL, " ")) == NULL) {
                 print_err(ERROR_INVALID_STRUCT_FORMAT);
                 return 0;
@@ -305,7 +302,7 @@ Number number_of_words(char *line) {
         if (second_arg[0] == '#') {
             i++;
             /*Check if it is struct*/
-        } else if ((strchr(second_arg, '.') != NULL) && ((struct_name = strtok(second_arg, ".")) != NULL)) {
+        } else if ((strchr(second_arg, '.') != NULL) && ((strtok(second_arg, ".")) != NULL)) {
             if ((struct_arg_num = strtok(NULL, " ")) == NULL) {
                 print_err(ERROR_INVALID_STRUCT_FORMAT);
                 return 0;

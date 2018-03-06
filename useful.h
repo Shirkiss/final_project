@@ -30,14 +30,7 @@ BOOL is_register(char* arg);
 /* Returns the number of the register "arg" if it's a register or -1 if not */
 Number extract_register(char* arg);
 
-/*recives 0 or 1 that represents the side of the 10 bits to read and returns the combination*/
-Number combination(Number firstComb, Number secComb);
-
-/*calculating number of bits used */  
-int bitforint ();
-
-/* converts to a dec base */
-unsigned int toEight(Number number);
-
+/* converts to a 32-base */
+char *convertBase(Number number);
 
 #endif /* __UTILS_H__ */

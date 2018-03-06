@@ -15,7 +15,6 @@
 extern char *strdup(const char *__s);
 
 extern Number code[CODE_SIZE], data[CODE_SIZE], cmdCount, dataCount, line_number, ext_count;
-extern char word_type[CODE_SIZE];
 extern label *ext_address;
 extern const command commands[];
 
@@ -55,7 +54,6 @@ BOOL secondpass_analyze_line(FILE *fd) {
         /* Add the data segment right after the code segment :) */
         for (i = 0; i < dataCount; ++i) {
             code[i + cmdCount] = data[i];
-            word_type[i + cmdCount] = ' ';
         }
         /* done with second pass */
         return FALSE;
@@ -67,16 +65,11 @@ Number handle_command_line_secondpass(char *line) {
     char *command;
     char *first_arg;
     char *second_arg;
-    char *type;
-    char *first_comb;
-    char *sec_comb;
-    char *dbl;
     char temp_line[MAX_BUFFER];
-    Number i, temp, bitsFirstComb = 0, bitsSecComb = 0, bothComb = 0, currCommand;
-    label *current_label, *current_label_index;
+    Number i, temp, currCommand;
+    label *current_label;
     char *struct_name;
     char *struct_arg_num;
-    int bitsType, bitsDbl;
     if (!line || *line == '\0')
         return ERROR_COMMAND_NULL;
     strcpy(temp_line, line);
@@ -124,7 +117,8 @@ Number handle_command_line_secondpass(char *line) {
             }
             if (extract_num(first_arg + 1, &temp) != -1) {
                 /* Jump past the opcode word into the operand word */
-                code[++cmdCount] = temp; /* Fill in the operand and jump cmdCount past it */
+                code[++cmdCount] =
+                        (temp << ADDRESS_SHIFT) & ADDRESS_MASK;; /* Fill in the operand and jump cmdCount past it */
                 code[currCommand] |= (ABSOLUTE_TYPE << TYPE_SHIFT) & TYPE_MASK;
                 return 0;
             } else {
@@ -136,7 +130,9 @@ Number handle_command_line_secondpass(char *line) {
             if (commands[i].legal_dest_addressing_methods[ADDRESS_METHOD_REGISTER_DIRECT] == FALSE) {
                 return (ERROR_COMMAND_OPERAND_ADDRESSING_METHOD_UNACCEPTABLE);
             }
+            temp = extract_register(first_arg);
             code[currCommand] |= ADDRESS_METHOD_REGISTER_DIRECT << DESTINATION_ADDRESSING_METHOD_SHIFT;
+            code[++cmdCount] |= (temp << DESTINATION_REGISTER_SHIFT) & DESTINATION_REGISTER_MASK;
             return 0;
         } else
             /* it's not a register but a label. */
@@ -145,8 +141,9 @@ Number handle_command_line_secondpass(char *line) {
                 return (ERROR_COMMAND_OPERAND_ADDRESSING_METHOD_UNACCEPTABLE);
             }
             code[currCommand] |= ADDRESS_METHOD_DIRECT << DESTINATION_ADDRESSING_METHOD_SHIFT;
-            code[++cmdCount] = current_label->address;
-            code[currCommand] |= (RELOCATABLE_TYPE << TYPE_SHIFT) & TYPE_MASK;
+            code[++cmdCount] = (current_label->address << ADDRESS_SHIFT) & ADDRESS_MASK;
+            code[cmdCount] |= (RELOCATABLE_TYPE << TYPE_SHIFT) & TYPE_MASK;
+
 
             if (current_label->type == LABEL_TYPE_EXTERNAL) {
                 /* Save the address of the external label for the ext file */
@@ -199,7 +196,8 @@ Number handle_command_line_secondpass(char *line) {
             /* Read a number now. That is the first operand, the addressing method is 0,
                an extra word will keep this number */
             if (extract_num(first_arg + 1, &temp) != -1) {
-                code[++cmdCount] = temp;
+                code[++cmdCount] =
+                        (temp << ADDRESS_SHIFT) & ADDRESS_MASK; /* Fill in the operand and jump cmdCount past it */
                 code[currCommand] |= (ABSOLUTE_TYPE << TYPE_SHIFT) & TYPE_MASK;
             }
         } else if (is_register(first_arg)) {
@@ -208,6 +206,8 @@ Number handle_command_line_secondpass(char *line) {
             }
             temp = extract_register(first_arg);
             code[currCommand] |= ADDRESS_METHOD_REGISTER_DIRECT << SOURCE_ADDRESSING_METHOD_SHIFT;
+            code[++cmdCount] |= (temp << SOURCE_REGISTER_SHIFT) & SOURCE_REGISTER_MASK;
+
         } else if ((current_label = get_label(first_arg)) != NULL) {
             if (commands[i].legal_source_addressing_methods[ADDRESS_METHOD_DIRECT] == FALSE) {
                 return (ERROR_COMMAND_OPERAND_ADDRESSING_METHOD_UNACCEPTABLE);
@@ -221,7 +221,7 @@ Number handle_command_line_secondpass(char *line) {
                 ext_address[ext_count].name = strdup(current_label->name);
                 ext_address[ext_count].address = ADDRESS_START + cmdCount;
                 ext_count++;
-                code[currCommand] |= (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK;
+                code[cmdCount] |= (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK;
             }
         } else if ((struct_name = strtok(first_arg, ".")) != NULL) {
             if ((struct_arg_num = strtok(NULL, " ")) == NULL) {
@@ -245,8 +245,8 @@ Number handle_command_line_secondpass(char *line) {
                 }
             }
             if (extract_num(struct_arg_num, &temp) != -1) {
-                code[++cmdCount] = temp;
-                code[currCommand] |= (ABSOLUTE_TYPE << TYPE_SHIFT) & TYPE_MASK;
+                code[++cmdCount] = (temp << ADDRESS_SHIFT) & ADDRESS_MASK;
+                code[cmdCount] |= (ABSOLUTE_TYPE << TYPE_SHIFT) & TYPE_MASK;
             } else {
                 return ERROR_INVALID_STRUCT_FORMAT;
             }
@@ -264,13 +264,23 @@ Number handle_command_line_secondpass(char *line) {
                 code[currCommand] |= (ABSOLUTE_TYPE << TYPE_SHIFT) & TYPE_MASK;
                 return 0;
             }
-        } else
-            /* The first operand is a register or a label. */
-        if (is_register(second_arg)) {
+        } else if (((is_register(first_arg)) & (is_register(second_arg)))) {
             if (commands[i].legal_dest_addressing_methods[ADDRESS_METHOD_REGISTER_DIRECT] == FALSE) {
                 return (ERROR_COMMAND_OPERAND_ADDRESSING_METHOD_UNACCEPTABLE);
             }
+            temp = extract_register(second_arg);
             code[currCommand] |= (ADDRESS_METHOD_REGISTER_DIRECT << DESTINATION_ADDRESSING_METHOD_SHIFT);
+            code[cmdCount] |= (temp << DESTINATION_REGISTER_SHIFT) & DESTINATION_REGISTER_MASK;
+
+            return 0;
+        } else if (is_register(second_arg)) {
+            if (commands[i].legal_dest_addressing_methods[ADDRESS_METHOD_REGISTER_DIRECT] == FALSE) {
+                return (ERROR_COMMAND_OPERAND_ADDRESSING_METHOD_UNACCEPTABLE);
+            }
+            temp = extract_register(second_arg);
+            code[currCommand] |= (ADDRESS_METHOD_REGISTER_DIRECT << DESTINATION_ADDRESSING_METHOD_SHIFT);
+            code[++cmdCount] |= (temp << DESTINATION_REGISTER_SHIFT) & DESTINATION_REGISTER_MASK;
+
             return 0;
         } else
             /* It's a label. */
@@ -279,15 +289,16 @@ Number handle_command_line_secondpass(char *line) {
                 return (ERROR_COMMAND_OPERAND_ADDRESSING_METHOD_UNACCEPTABLE);
             }
             code[currCommand] |= ADDRESS_METHOD_DIRECT << DESTINATION_ADDRESSING_METHOD_SHIFT;
-            code[++cmdCount] = current_label->address;
-            code[currCommand] |= (RELOCATABLE_TYPE << TYPE_SHIFT) & TYPE_MASK;
+            code[++cmdCount] = (current_label->address << ADDRESS_SHIFT) & ADDRESS_MASK;
+            code[cmdCount] |= (RELOCATABLE_TYPE << TYPE_SHIFT) & TYPE_MASK;
             if (current_label->type == LABEL_TYPE_EXTERNAL) {
                 /* Save the address of the external label for the ext file */
                 ext_address = realloc(ext_address, sizeof(label) * (ext_count + 1));
                 ext_address[ext_count].name = strdup(current_label->name);
                 ext_address[ext_count].address = ADDRESS_START + cmdCount;
+                code[cmdCount] = (ext_count << ADDRESS_SHIFT) & ADDRESS_MASK;
+                code[cmdCount] |= (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK;
                 ext_count++;
-                code[currCommand] |= (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK;
             }
             return 0;
         } else if ((struct_name = strtok(second_arg, ".")) != NULL) {

@@ -11,9 +11,8 @@
 #define ADDRESS_START       100
 #define CODE_SIZE           256 /* 256 in words */
 #define MAX_LABEL_LENGTH    30
-#define MAX_BUFFER          80 /* TODO: to update the number */
+#define MAX_BUFFER          80
 #define NUMBER_OF_REGISTERS 8
-#define ZERO_BIT            (1 << PSW_BIT_ZERO)
 #define COMMENT   ';'
 
 typedef enum {
@@ -49,13 +48,6 @@ typedef enum {
     ERR_COMPILATION
 } ASSEMBLING_ERRORS;
 
-
-typedef enum {
-    BOTH_LEFT = 0,
-    SRC_LEFT_DEST_RIGHT,
-    SRC_RIGHT_DEST_LEFT,
-    BOTH_RIGHT
-} COMB_OPTION;
 
 typedef enum {
     ABSOLUTE_TYPE = 0,

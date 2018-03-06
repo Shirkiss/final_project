@@ -61,11 +61,12 @@ void print_err(Number err) {
     was_error = TRUE;
 }
 
+char base_digits[32] =
+        {'!', '@', '#', '$', '%', '^', '&', '*', '<', '>', 'a', 'b', 'c', 'd', 'e', 'f',
+         'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v'};
+
 char reVal(int num) {
-    if (num >= 0 && num <= 9)
-        return (char) (num + '0');
-    else
-        return (char) (num - 10 + 'A');
+    return base_digits[num];
 }
 
 /* Utility function to reverse a string */
@@ -211,77 +212,22 @@ Number extract_register(char *arg) {
     return -1;
 }
 
-
-/*recives 0 or 1 that represents the side of the 10 bits to read and returns the combination*/
-Number combination(Number firstComb, Number secComb) {
-    if (firstComb && secComb) {
-        return BOTH_RIGHT;
-    }
-    if (firstComb && !secComb) {
-        return SRC_RIGHT_DEST_LEFT;
-    }
-    if (!firstComb && secComb) {
-        return SRC_LEFT_DEST_RIGHT;
-    }
-    if (!firstComb && !secComb) {
-        return BOTH_LEFT;
-    }
-    return 0;
-}
-
-/*calculating number of bits used */
-int bitforint() {
-    unsigned int x = 1;
-    int c = 0;
-    while (x != 0) {
-        x = x << 1;
-        c = c + 1;
-    }
-    return c;
-}
-
-
-/* converts to a dec base */
-unsigned int toEight(Number number) {
-    unsigned int tmp = 0;
-    Number number_copy = number;
-    unsigned int tmpNeg = 0;
-    Number c = 1;
-    unsigned int mask = 1;
-    int i;
-    mask = mask << (bitforint() - 1);
-    /* checks if the number is negetive */
-    if ((mask & number) != 0) {
-        mask = 1;
-        for (i = 0; i < (bitforint() - 1); i++) {
-            number_copy = (number_copy ^ mask);
-            mask = mask << 1;
-        }
-        number_copy++;
-        tmpNeg = number_copy;
-    } else
-        tmpNeg = number;
-    while ((tmpNeg != 0) && (c <= 1000000000)) {
-        tmp += c * (tmpNeg % 8);
-        c *= 10;
-        tmpNeg /= 8;
-    }
-    return tmp;
-}
-
 /* converts to a 32-base */
 char *convertBase(Number number) {
     char *res;
     int index = 0;  /* Initialize index of result */
 
-    res = malloc(sizeof(char) * 3);
+    res = malloc(sizeof(char) * 2);
 
     /* Convert input number to 32 base by repeatedly
      dividing it by base and taking remainder */
+
     while (number > 0) {
         res[index++] = reVal(number % 32);
         number /= 32;
     }
+    while (index < 2)
+        res[index++] = '!';
     res[index] = '\0';
 
     /* Reverse the result */

@@ -17,8 +17,7 @@
 #include "secondpass.h"
 
 /* useful variables */
-Number code[CODE_SIZE]; /* CODE_SIZE * sizeof(num) bits. This will hold the code and, in the end, the data too */
-char word_type[CODE_SIZE]; /* 'a', 'r', 'e' */
+Number code[CODE_SIZE]; /* Holds the code and, in the end, the data too */
 Number data[CODE_SIZE]; /* Store the data until we're done processing instructions */
 Number cmdCount = 0;
 Number dataCount = 0;
@@ -27,10 +26,11 @@ label *labels; /* Hold labels here */
 Number num_of_labels = 0;
 
 Number ext_count = 0;
-label *ext_address; /* Remember adress of external labels in the file, here */
+label *ext_address; /* The address of external labels in the file */
 
 extern BOOL was_error;
 
+/* Types of directives */
 const directive directives_type[] =
         {
                 {".entry",  DIRECTIVE_ENTRY},
@@ -41,13 +41,7 @@ const directive directives_type[] =
                 {NULL,      0}
         };
 
-/* Creating list of commands based on the  command struct:
- *  char *name;
-    Number num_of_arguments;
-    Number opcode;
-    BOOL legal_source_addressing_methods[ADDRESS_METHOD_NUM];
-    BOOL legal_dest_addressing_methods[ADDRESS_METHOD_NUM];
- */
+/* List of commands including the name, the number of operands, the opcode and the legal address methods */
 const command commands[] =
         {
                 {"mov",  2, OPCODE_MOV,  {TRUE,  TRUE,  TRUE,  TRUE},  {FALSE, TRUE,  TRUE,  TRUE}},
@@ -70,7 +64,7 @@ const command commands[] =
         };
 
 
-/* Main function of the assembler, call this upon a readable .as file to start compiling it. Assembles a file using first and seocond pass. */
+/* Main function of the assembler. Assembles a file using first and seocond pass. */
 int assemble(char *filename) {
     char *fileplusextension;
     Number compiling = 1;
@@ -84,24 +78,24 @@ int assemble(char *filename) {
     strcpy(fileplusextension, filename);
     strcat(fileplusextension, ".as"); /* add .as to the end of the string */
 
-    /* TODO: to change the line before finishing
-     * fd = fopen(fileplusextension, "r"); */
-    fd = fopen("C:\\Users\\shir.cohen\\CLionProjects\\final_project\\InputA.as", "r");
+    fd = fopen(fileplusextension, "r");
     line_number = 0;
     if (fd == NULL)
         return ERR_NO_FILE;
     cmdCount = 0;
-    /* calling first and second pass */
+    /* calling first pass */
     while (compiling) {
         compiling = firstpass_analyze_line(fd);
     }
+    /* If there was no error - continue to second pass */
     if (!was_error) {
         cmdCount = -1;
         fseek(fd, 0L, SEEK_SET);
         do {
+            /* Calling second pass */
             compiling = secondpass_analyze_line(fd);
         } while (compiling);
-        /* creating outpot files */
+        /* Creating outpot files */
         if (!was_error) {
             create_entries_file(filename);
             create_externals_file(filename);
@@ -127,7 +121,6 @@ int assemble(char *filename) {
     while (line_number < CODE_SIZE) {
         code[line_number] = 0;
         data[line_number] = 0;
-        word_type[line_number] = 0;
         line_number++;
     }
     line_number = 0;
@@ -272,7 +265,7 @@ BOOL is_useless_line(char *line) {
     /* If there's no line or it's a comment, return true */
     if (!line || line[0] == COMMENT)
         return TRUE;
-    /* goes through all the characters, see if we have a nonwhitespace character */
+    /* goes through all the characters, and check for non whitespace character */
     for (i = 0; line[i] != '\0' && i < MAX_BUFFER; ++i) {
         if (line[i] != '\t' && line[i] != ' ' && line[i] != '\n')
             return FALSE; /* found a non whitespace character, this is not a useless line */
@@ -296,7 +289,7 @@ void create_externals_file(char *filename) {
         strcat(fileplusextension, ".ext");
         fd = fopen(fileplusextension, "w");
         for (i = 0; i < ext_count; ++i) {
-            fprintf(fd, "%-31s %2s\n", ext_address[i].name, convertBase(ext_address[i].address));
+            fprintf(fd, "%-31s %s\n", ext_address[i].name, convertBase(ext_address[i].address));
         }
         fclose(fd);
         free(fileplusextension);
@@ -325,7 +318,7 @@ void create_entries_file(char *filename) {
 
         for (i = 0; i < num_of_labels; ++i) {
             if (labels[i].type == LABEL_TYPE_ENTRY) {
-                fprintf(fd, "%-31s %-2s\n", labels[i].name, convertBase(labels[i].address));
+                fprintf(fd, "%-31s %s\n", labels[i].name, convertBase(labels[i].address));
             }
         }
         fclose(fd);
@@ -345,9 +338,9 @@ void create_object_file(char *filename) {
     strcpy(fileplusextension, filename);
     strcat(fileplusextension, ".ob");
     fd = fopen(fileplusextension, "w");
-    fprintf(fd, "%6s %s %s\n", "", convertBase(cmdCount), convertBase(dataCount));
+    fprintf(fd, "%s %s %s\n", "", convertBase(cmdCount), convertBase(dataCount));
     for (i = 0; i < cmdCount + dataCount; ++i) {
-        fprintf(fd, "%.7u %.7u %c\n", convertBase(i + ADDRESS_START), convertBase(code[i]), word_type[i]);
+        fprintf(fd, "%s %s \n", convertBase(i + ADDRESS_START), convertBase(code[i]));
     }
     fclose(fd);
     free(fileplusextension);
