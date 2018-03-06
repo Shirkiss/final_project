@@ -144,14 +144,13 @@ Number handle_command_line_secondpass(char *line) {
             code[++cmdCount] = (current_label->address << ADDRESS_SHIFT) & ADDRESS_MASK;
             code[cmdCount] |= (RELOCATABLE_TYPE << TYPE_SHIFT) & TYPE_MASK;
 
-
             if (current_label->type == LABEL_TYPE_EXTERNAL) {
                 /* Save the address of the external label for the ext file */
                 ext_address = realloc(ext_address, sizeof(label) * (ext_count + 1));
                 ext_address[ext_count].name = strdup(current_label->name);
                 ext_address[ext_count].address = ADDRESS_START + cmdCount;
+                code[cmdCount] = (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK; ;
                 ext_count++;
-                code[currCommand] |= (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK;
             }
             return 0;
         } else if ((struct_name = strtok(first_arg, ".")) != NULL) {
@@ -171,8 +170,8 @@ Number handle_command_line_secondpass(char *line) {
                     ext_address = realloc(ext_address, sizeof(label) * (ext_count + 1));
                     ext_address[ext_count].name = strdup(current_label->name);
                     ext_address[ext_count].address = ADDRESS_START + cmdCount;
+                    code[cmdCount] = (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK; ;
                     ext_count++;
-                    code[currCommand] |= (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK;
                 }
             }
             if (extract_num(struct_arg_num, &temp) != -1) {
@@ -220,8 +219,8 @@ Number handle_command_line_secondpass(char *line) {
                 ext_address = realloc(ext_address, sizeof(label) * (ext_count + 1));
                 ext_address[ext_count].name = strdup(current_label->name);
                 ext_address[ext_count].address = ADDRESS_START + cmdCount;
+                code[cmdCount] = (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK; ;
                 ext_count++;
-                code[cmdCount] |= (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK;
             }
         } else if ((struct_name = strtok(first_arg, ".")) != NULL) {
             if ((struct_arg_num = strtok(NULL, " ")) == NULL) {
@@ -240,8 +239,8 @@ Number handle_command_line_secondpass(char *line) {
                     ext_address = realloc(ext_address, sizeof(label) * (ext_count + 1));
                     ext_address[ext_count].name = strdup(current_label->name);
                     ext_address[ext_count].address = ADDRESS_START + cmdCount;
+                    code[cmdCount] = (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK; ;
                     ext_count++;
-                    code[currCommand] |= (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK;
                 }
             }
             if (extract_num(struct_arg_num, &temp) != -1) {
@@ -296,8 +295,7 @@ Number handle_command_line_secondpass(char *line) {
                 ext_address = realloc(ext_address, sizeof(label) * (ext_count + 1));
                 ext_address[ext_count].name = strdup(current_label->name);
                 ext_address[ext_count].address = ADDRESS_START + cmdCount;
-                code[cmdCount] = (ext_count << ADDRESS_SHIFT) & ADDRESS_MASK;
-                code[cmdCount] |= (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK;
+                code[cmdCount] = (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK; ;
                 ext_count++;
             }
             return 0;
@@ -317,8 +315,8 @@ Number handle_command_line_secondpass(char *line) {
                     ext_address = realloc(ext_address, sizeof(label) * (ext_count + 1));
                     ext_address[ext_count].name = strdup(current_label->name);
                     ext_address[ext_count].address = ADDRESS_START + cmdCount;
+                    code[cmdCount] = (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK; ;
                     ext_count++;
-                    code[currCommand] |= (EXTERNAL_TYPE << TYPE_SHIFT) & TYPE_MASK;
                 }
             }
             if (extract_num(struct_arg_num, &temp) != -1) {

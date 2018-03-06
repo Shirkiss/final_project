@@ -26,6 +26,7 @@ BOOL firstpass_analyze_line(FILE *fd) {
     char *next_arg;
     label *current_label;
     Number errno;
+    int i, j;
     Number temp, curr_loc, data_len;
     BOOL valid_label = FALSE;
     curr_loc = ADDRESS_START;
@@ -186,6 +187,16 @@ BOOL firstpass_analyze_line(FILE *fd) {
             cmdCount += number_of_words((valid_label) ? next_arg : current_line);
         }
     } else {
+        /*sort by code position*/
+        for (i = 0; i < num_of_labels ; ++i) {
+            for (j = i + 1; j < num_of_labels; ++j) {
+                if (labels[i].address > labels[j].address) {
+                    label temp_label = labels[i];
+                    labels[i] = labels[j];
+                    labels[j] = temp_label;
+                }
+            }
+        }
         curr_loc = ADDRESS_START + cmdCount;
         /* We need to offset all the data labels */
         for (line_number = 0; line_number < num_of_labels; ++line_number) {
